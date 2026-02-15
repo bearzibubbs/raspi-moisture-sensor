@@ -42,11 +42,11 @@ def test_config_validation_invalid_channel():
     """Test config validation rejects invalid sensor channels"""
     with pytest.raises(ValueError):
         SensorConfig(
-            channel=99,  # Invalid - must be 0-7
+            channel=99,  # Invalid - must be 0, 2, 4, or 6
             type="capacitive",
             calibration={"min": 300, "max": 800},
-            labels={"location": "test"},
-            thresholds={"dry_percent": 30, "wet_percent": 85}
+            labels={"location": "test", "plant_type": "test", "sensor_name": "test"},
+            thresholds={"dry_percent": 30, "wet_percent": 85, "hysteresis": 5}
         )
 
 
