@@ -60,3 +60,6 @@ k8s/secrets.yaml
 # Raspberry Pi specific
 *.bak
 agent-data/
+pi-agent/data/
+pi-agent/config.yaml
+pi-agent/.env

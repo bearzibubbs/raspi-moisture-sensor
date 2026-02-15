@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  pi-agent:
+    build: .
+    image: moisture-monitoring/pi-agent:latest
+    container_name: moisture-pi-agent
+    restart: unless-stopped
+
+    # I2C hardware access
+    devices:
+      - /dev/i2c-1:/dev/i2c-1
+
+    # Privileged mode for hardware access (alternative to devices)
+    # Uncomment if devices alone doesn't work
+    # privileged: true
+
+    volumes:
+      # Persistent storage for SQLite database
+      - ./data:/data
+      # Configuration file
+      - ./config.yaml:/app/config.yaml:ro
+
+    environment:
+      # Orchestrator connection
+      - ORCHESTRATOR_URL=${ORCHESTRATOR_URL}
+      - AGENT_TOKEN=${AGENT_TOKEN}
+
+      # Override config file path if needed
+      # - CONFIG_FILE=/app/config.yaml
+
+      # Override database path
+      - DB_PATH=/data/agent.db
+
+      # Logging
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+
+    ports:
+      # Management API
+      - "8080:8080"
+
+    networks:
+      - moisture-monitoring
+
+networks:
+  moisture-monitoring:
+    driver: bridge
