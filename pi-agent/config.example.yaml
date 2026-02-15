@@ -1,0 +1,46 @@
+agent:
+  id: "${AGENT_ID}"  # Generated during setup
+  orchestrator_url: "${ORCHESTRATOR_URL}"
+  bootstrap_token: "${BOOTSTRAP_TOKEN}"  # For first registration
+  agent_token: "${AGENT_TOKEN}"  # Permanent token (auto-populated)
+  sync_interval_seconds: 60
+  config_pull_interval_seconds: 300
+
+sensors:
+  - channel: 0
+    type: "capacitive"
+    calibration:
+      min: 300
+      max: 800
+    labels:
+      location: "EDIT_ME"
+      plant_type: "EDIT_ME"
+      sensor_name: "EDIT_ME"
+    thresholds:
+      dry_percent: 30
+      wet_percent: 85
+      hysteresis: 5
+
+  - channel: 2
+    type: "resistive"
+    calibration:
+      min: 0
+      max: 950
+    labels:
+      location: "EDIT_ME"
+      plant_type: "EDIT_ME"
+      sensor_name: "EDIT_ME"
+    thresholds:
+      dry_percent: 30
+      wet_percent: 85
+      hysteresis: 5
+
+local_api:
+  enabled: true
+  port: 8080
+  bearer_token: "${LOCAL_API_TOKEN}"
+
+storage:
+  database_path: "/var/lib/pi-agent/readings.db"
+  cleanup_synced_older_than_days: 30
+  max_db_size_mb: 500
