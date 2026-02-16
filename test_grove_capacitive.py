@@ -104,7 +104,7 @@ def main():
     
     # Calibration values (adjust these for your sensor/soil)
     # NOTE: For capacitive sensors, MIN is WET and MAX is DRY!
-    SENSOR_MIN = 400    # Value in water (wet)
+    SENSOR_MIN = 300    # Value in water (wet)
     SENSOR_MAX = 800    # Value in dry air (dry)
     
     print("\nCalibration values (edit script to adjust):")
