@@ -1,46 +1,103 @@
+# Pi Agent Configuration
+#
+# This file contains only LOCAL settings for the agent.
+# Sensor configurations, alert rules, and most settings are managed
+# centrally by the Orchestrator and pulled automatically.
+#
+# Setup Instructions:
+# 1. Generate a bootstrap token from the orchestrator:
+#    curl -X POST https://orchestrator.example.com/agents/bootstrap-tokens \
+#      -H "Content-Type: application/json" \
+#      -d '{"expires_in_hours": 168}'
+#
+# 2. Copy this file to config.yaml and fill in the values below
+# 3. Run the agent - it will register and pull its configuration automatically
+
 agent:
-  id: "${AGENT_ID}"  # Generated during setup
-  orchestrator_url: "${ORCHESTRATOR_URL}"
-  bootstrap_token: "${BOOTSTRAP_TOKEN}"  # For first registration
-  agent_token: "${AGENT_TOKEN}"  # Permanent token (auto-populated)
+  # Unique identifier for this agent (e.g., hostname or custom name)
+  id: "pi-greenhouse-01"
+
+  # Orchestrator connection details
+  orchestrator_url: "https://orchestrator.example.com"
+
+  # Bootstrap token for initial registration (one-time use)
+  # Get this from: POST /agents/bootstrap-tokens
+  # After registration, this is no longer needed
+  bootstrap_token: "bst_k8s_xxxxxxxxxxxxx"
+
+  # Agent token (auto-populated after registration, do not edit)
+  agent_token: ""
+
+  # How often to sync sensor readings to orchestrator (seconds)
   sync_interval_seconds: 60
+
+  # How often to check for config updates from orchestrator (seconds)
   config_pull_interval_seconds: 300
 
-sensors:
-  - channel: 0
-    type: "capacitive"
-    calibration:
-      min: 300
-      max: 800
-    labels:
-      location: "EDIT_ME"
-      plant_type: "EDIT_ME"
-      sensor_name: "EDIT_ME"
-    thresholds:
-      dry_percent: 30
-      wet_percent: 85
-      hysteresis: 5
+  # How often to send heartbeat to orchestrator (seconds)
+  heartbeat_interval_seconds: 300
 
-  - channel: 2
-    type: "resistive"
-    calibration:
-      min: 0
-      max: 950
-    labels:
-      location: "EDIT_ME"
-      plant_type: "EDIT_ME"
-      sensor_name: "EDIT_ME"
-    thresholds:
-      dry_percent: 30
-      wet_percent: 85
-      hysteresis: 5
-
+# Local API for debugging/monitoring (optional)
 local_api:
   enabled: true
   port: 8080
-  bearer_token: "${LOCAL_API_TOKEN}"
+  # Generate with: openssl rand -hex 32
+  bearer_token: "your-secure-token-here"
 
+# Local storage for readings before sync
 storage:
   database_path: "/var/lib/pi-agent/readings.db"
   cleanup_synced_older_than_days: 30
   max_db_size_mb: 500
+
+# Hardware-specific settings (local only)
+hardware:
+  # ADC type: "ADS1115" or "MCP3008"
+  adc_type: "ADS1115"
+
+  # I2C bus (for ADS1115)
+  i2c_bus: 1
+
+  # I2C address (for ADS1115, typically 0x48)
+  i2c_address: 0x48
+
+  # SPI settings (for MCP3008)
+  # spi_bus: 0
+  # spi_device: 0
+
+# Logging configuration
+logging:
+  level: "INFO"  # DEBUG, INFO, WARNING, ERROR
+  file: "/var/log/pi-agent/agent.log"
+  max_size_mb: 10
+  backup_count: 5
+
+# =============================================================================
+# SENSOR CONFIGURATION IS MANAGED BY ORCHESTRATOR
+# =============================================================================
+#
+# Do NOT configure sensors here. They are managed centrally by the orchestrator.
+#
+# To configure sensors, use the orchestrator API:
+#   PUT /agents/{agent_id}/config
+#   {
+#     "sensors": [
+#       {
+#         "channel": 0,
+#         "type": "capacitive",
+#         "calibration": {"min": 300, "max": 800},
+#         "labels": {
+#           "location": "Greenhouse A",
+#           "plant_type": "Tomato",
+#           "sensor_name": "Tomato-1"
+#         },
+#         "thresholds": {
+#           "dry_percent": 30,
+#           "wet_percent": 85,
+#           "hysteresis": 5
+#         }
+#       }
+#     ]
+#   }
+#
+# The agent will automatically pull this configuration from the orchestrator.
