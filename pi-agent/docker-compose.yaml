@@ -3,7 +3,7 @@ version: '3.8'
 services:
   pi-agent:
     build: .
-    image: moisture-monitoring/pi-agent:latest
+    image: quay.nekohouse.ca:8443/moisture-sensor/pi-agent:latest
     container_name: moisture-pi-agent
     restart: unless-stopped
 

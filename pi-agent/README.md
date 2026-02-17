@@ -13,7 +13,7 @@ The Pi Agent runs on Raspberry Pi devices with Grove Base HAT and moisture senso
 
 ## Deployment Options
 
-### Option 1: Docker Container (Recommended)
+### Option 1: podman Container (Recommended)
 
 **Prerequisites:**
 - Docker or Podman installed
@@ -46,20 +46,20 @@ cp .env.example .env
 mkdir -p data
 
 # Start the agent
-docker-compose up -d
+podman-compose up -d
 
 # View logs
-docker-compose logs -f
+podman-compose logs -f
 
 # Check status
-docker-compose ps
+podman-compose ps
 curl http://localhost:8080/health
 ```
 
 **Building the Image:**
 
 ```bash
-docker build -t moisture-monitoring/pi-agent:latest .
+podman build -t moisture-monitoring/pi-agent:latest .
 ```
 
 **Updating:**
@@ -69,10 +69,10 @@ docker build -t moisture-monitoring/pi-agent:latest .
 git pull
 
 # Rebuild and restart
-docker-compose up -d --build
+podman-compose up -d --build
 
 # View logs
-docker-compose logs -f pi-agent
+podman-compose logs -f pi-agent
 ```
 
 ### Option 2: Systemd Service
@@ -141,13 +141,13 @@ See `config.example.yaml` for full configuration options.
 
 1. **Measure in air:**
    ```bash
-   docker-compose exec pi-agent python -c "from collector import read_sensor; print(read_sensor(0))"
+   podman-compose exec pi-agent python -c "from collector import read_sensor; print(read_sensor(0))"
    ```
    Use this as `calibration.max`
 
 2. **Measure in water:**
    ```bash
-   docker-compose exec pi-agent python -c "from collector import read_sensor; print(read_sensor(0))"
+   podman-compose exec pi-agent python -c "from collector import read_sensor; print(read_sensor(0))"
    ```
    Use this as `calibration.min`
 
@@ -179,7 +179,7 @@ Same process, but values are inverted (lower = drier, higher = wetter).
    sudo usermod -aG i2c $USER
    ```
 
-4. Use privileged mode (uncomment in docker-compose.yaml):
+4. Use privileged mode (uncomment in podman-compose.yaml):
    ```yaml
    privileged: true
    ```
@@ -188,7 +188,7 @@ Same process, but values are inverted (lower = drier, higher = wetter).
 
 1. Verify orchestrator URL is accessible
 2. Check bootstrap token (for first registration)
-3. Review logs: `docker-compose logs pi-agent`
+3. Review logs: `podman-compose logs pi-agent`
 
 ### Readings Seem Incorrect
 
@@ -209,8 +209,8 @@ Available at `http://localhost:8080`:
 ### View Logs
 
 ```bash
-# Docker
-docker-compose logs -f pi-agent
+# podman
+podman-compose logs -f pi-agent
 
 # Systemd
 sudo journalctl -u moisture-pi-agent -f
@@ -219,8 +219,8 @@ sudo journalctl -u moisture-pi-agent -f
 ### Restart Agent
 
 ```bash
-# Docker
-docker-compose restart pi-agent
+# podman
+podman-compose restart pi-agent
 
 # Systemd
 sudo systemctl restart moisture-pi-agent
@@ -230,7 +230,7 @@ sudo systemctl restart moisture-pi-agent
 
 ```bash
 # Check database size
-docker-compose exec pi-agent ls -lh /data/agent.db
+podman-compose exec pi-agent ls -lh /data/agent.db
 
 # Agent automatically cleans up old synced readings every 24h
 ```

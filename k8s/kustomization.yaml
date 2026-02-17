@@ -9,6 +9,11 @@ resources:
   - influxdb-statefulset.yaml
   - orchestrator-deployment.yaml
   - api-server-deployment.yaml
+  - es-apiserver.yaml
+  - es-influxdb.yaml
+  - es-orchestrator.yaml
+  - es-psql.yaml
+  - sa-dockerconfigjson.yaml
 
 # Uncomment after creating secrets.yaml from secrets-example.yaml
 # - secrets.yaml

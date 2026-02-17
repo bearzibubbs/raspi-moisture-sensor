@@ -1,0 +1,34 @@
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: orchestrator-secret
+  namespace: moisture-monitoring
+spec:
+  data:
+  - remoteRef:
+      conversionStrategy: Default
+      decodingStrategy: None
+      key: MOISTURE_SENSOR_PSQL_PASSWORD
+      metadataPolicy: None
+    secretKey: password
+  - remoteRef:
+      conversionStrategy: Default
+      decodingStrategy: None
+      key: MOISTURE_SENSOR_INFLUX_TOKEN
+      metadataPolicy: None
+    secretKey: api_token
+  refreshInterval: 1h
+  secretStoreRef:
+    kind: ClusterSecretStore
+    name: cluster-secretstore
+  target:
+    template:
+      data: 
+        database-url: "postgresql://moisture_user:{{ .password }}@postgresql:5432/moisture_monitor?sslmode=disable"
+        influxdb-url: "http://influxdb:8086"
+        influxdb-token: "{{ .api_token }}"
+        influxdb-org: "moisture-monitoring"
+        influxdb-bucket: "sensor-data"
+    creationPolicy: Owner
+    deletionPolicy: Retain
+    name: orchestrator-secret

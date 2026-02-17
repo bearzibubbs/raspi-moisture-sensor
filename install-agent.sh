@@ -49,7 +49,8 @@ apt-get install -y \
     python3-venv \
     i2c-tools \
     gpiod \
-    git
+    git \
+    cargo
 
 # Enable I2C
 echo "[2/8] Enabling I2C..."

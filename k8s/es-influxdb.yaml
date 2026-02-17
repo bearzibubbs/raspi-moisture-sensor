@@ -1,0 +1,31 @@
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: influxdb-secret
+  namespace: moisture-monitoring
+spec:
+  data:
+  - remoteRef:
+      conversionStrategy: Default
+      decodingStrategy: None
+      key: MOISTURE_SENSOR_INFLUX_PASSWORD
+      metadataPolicy: None
+    secretKey: password
+  - remoteRef:
+      conversionStrategy: Default
+      decodingStrategy: None
+      key: MOISTURE_SENSOR_INFLUX_TOKEN
+    secretKey: api_token
+  refreshInterval: 1h
+  secretStoreRef:
+    kind: ClusterSecretStore
+    name: cluster-secretstore
+  target:
+    template:
+      data: 
+        username: admin
+        password: "{{ .password }}"
+        admin-token: "{{ .api_token }}"
+    creationPolicy: Owner
+    deletionPolicy: Retain
+    name: influxdb-secret

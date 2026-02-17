@@ -23,6 +23,9 @@ COPY *.py ./
 RUN mkdir -p /data && \
     chmod 755 /data
 
+# Create groups used by the application
+RUN groupadd i2c
+
 # Create non-root user (but still needs I2C access)
 RUN useradd -m -u 1000 -G i2c appuser && \
     chown -R appuser:appuser /app /data

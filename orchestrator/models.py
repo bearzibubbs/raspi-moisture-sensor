@@ -3,8 +3,9 @@ from sqlalchemy.sql import func
 from database import Base
 from passlib.context import CryptContext
 import secrets
+import hashlib
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+pwd_context = CryptContext(schemes=["sha256_crypt"], deprecated="auto")
 
 
 class Agent(Base):
@@ -24,13 +25,17 @@ class Agent(Base):
 
     @staticmethod
     def hash_token(token: str) -> str:
-        """Hash a token using bcrypt"""
-        return pwd_context.hash(token)
+        """Hash a token using SHA256 + bcrypt (to stay under bcrypt's 72-byte limit)"""
+        # Hash with SHA256 first to keep under bcrypt's 72-byte limit
+        sha256_hash = hashlib.sha256(token.encode('utf-8')).hexdigest()
+        return pwd_context.hash(sha256_hash)
 
     @staticmethod
     def verify_token(plain_token: str, hashed_token: str) -> bool:
         """Verify a token against its hash"""
-        return pwd_context.verify(plain_token, hashed_token)
+        # Hash with SHA256 first to match hash_token behavior
+        sha256_hash = hashlib.sha256(plain_token.encode('utf-8')).hexdigest()
+        return pwd_context.verify(sha256_hash, hashed_token)
 
 
 class BootstrapToken(Base):
