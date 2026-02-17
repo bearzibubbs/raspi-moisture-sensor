@@ -22,9 +22,11 @@ spec:
       labels:
         app: orchestrator
     spec:
+      imagePullSecrets:
+      - name: pull-secret
       containers:
       - name: orchestrator
-        image: moisture-monitoring/orchestrator:latest
+        image: quay.nekohouse.ca:8443/moisture-sensor/orchestrator:v0.3
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8000
@@ -98,28 +100,19 @@ spec:
     targetPort: 8000
   type: ClusterIP
 ---
-apiVersion: networking.k8s.io/v1
-kind: Ingress
+apiVersion: route.openshift.io/v1
+kind: Route
 metadata:
-  name: orchestrator-ingress
+  name: orchestrator
   namespace: moisture-monitoring
-  annotations:
-    cert-manager.io/cluster-issuer: "letsencrypt-prod"
-    nginx.ingress.kubernetes.io/ssl-redirect: "true"
 spec:
-  ingressClassName: nginx
+  to:
+    kind: Service
+    name: orchestrator
+    weight: 100
+  port:
+    targetPort: 8000
   tls:
-  - hosts:
-    - orchestrator.example.com
-    secretName: orchestrator-tls
-  rules:
-  - host: orchestrator.example.com
-    http:
-      paths:
-      - path: /
-        pathType: Prefix
-        backend:
-          service:
-            name: orchestrator
-            port:
-              number: 8000
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+  wildcardPolicy: None

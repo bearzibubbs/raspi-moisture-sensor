@@ -1,4 +1,30 @@
 apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgresql-config
+  namespace: moisture-monitoring
+data:
+  pg_hba.conf: |
+    # TYPE  DATABASE        USER            ADDRESS                 METHOD
+    local   all             all                                     trust
+    host    all             all             127.0.0.1/32            trust
+    host    all             all             ::1/128                 trust
+    # Allow connections from OpenShift pod network
+    host    all             all             10.128.0.0/16           md5
+    host    all             all             10.0.0.0/8              md5
+  init-db.sh: |
+    #!/bin/bash
+    set -e
+
+    # Create database if it doesn't exist
+    psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname template1 <<-EOSQL
+        SELECT 'CREATE DATABASE moisture_monitor'
+        WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'moisture_monitor')\gexec
+    EOSQL
+
+    echo "Database initialization complete"
+---
+apiVersion: v1
 kind: Service
 metadata:
   name: postgresql
@@ -27,6 +53,25 @@ spec:
       labels:
         app: postgresql
     spec:
+      initContainers:
+      - name: copy-pg-hba
+        image: postgres:15-alpine
+        command: ['sh', '-c']
+        args:
+        - |
+          if [ ! -f /var/lib/postgresql/data/pgdata/PG_VERSION ]; then
+            echo "Data directory not initialized yet, skipping pg_hba.conf copy"
+          else
+            cp /etc/postgresql/pg_hba.conf /var/lib/postgresql/data/pgdata/pg_hba.conf
+            chmod 600 /var/lib/postgresql/data/pgdata/pg_hba.conf
+            echo "Copied pg_hba.conf to data directory"
+          fi
+        volumeMounts:
+        - name: postgresql-data
+          mountPath: /var/lib/postgresql/data
+        - name: postgresql-config
+          mountPath: /etc/postgresql/pg_hba.conf
+          subPath: pg_hba.conf
       containers:
       - name: postgresql
         image: postgres:15-alpine
@@ -48,9 +93,14 @@ spec:
               key: password
         - name: PGDATA
           value: /var/lib/postgresql/data/pgdata
+        - name: POSTGRES_HOST_AUTH_METHOD
+          value: md5
         volumeMounts:
         - name: postgresql-data
           mountPath: /var/lib/postgresql/data
+        - name: postgresql-config
+          mountPath: /docker-entrypoint-initdb.d/init-db.sh
+          subPath: init-db.sh
         resources:
           requests:
             memory: "256Mi"
@@ -74,6 +124,10 @@ spec:
             - $(POSTGRES_USER)
           initialDelaySeconds: 5
           periodSeconds: 5
+      volumes:
+      - name: postgresql-config
+        configMap:
+          name: postgresql-config
   volumeClaimTemplates:
   - metadata:
       name: postgresql-data

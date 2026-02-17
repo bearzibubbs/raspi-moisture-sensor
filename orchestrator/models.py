@@ -20,7 +20,7 @@ class Agent(Base):
     status = Column(String(50), default='active')
     desired_config_version = Column(Integer, default=1)
     applied_config_version = Column(Integer, default=0)
-    metadata = Column(JSON)
+    agent_metadata = Column(JSON)
 
     @staticmethod
     def hash_token(token: str) -> str:

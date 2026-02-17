@@ -48,7 +48,7 @@ influx_client: InfluxQueryClient = None
 
 # PostgreSQL connection for alerts
 DATABASE_URL = os.getenv(
-    "POSTGRES_URL",
+    "DATABASE_URL",
     "postgresql://postgres:postgres@localhost:5432/moisture_monitoring"
 )
 engine = create_engine(DATABASE_URL)
@@ -115,6 +115,24 @@ class FleetStatusResponse(BaseModel):
     total_sensors: int
     active_alerts: int
     last_reading: Optional[str]
+
+
+class Agent(BaseModel):
+    agent_id: str
+    hostname: Optional[str]
+    hardware: Optional[str]
+    registered_at: str
+    last_heartbeat: Optional[str]
+    last_sync_at: Optional[str]
+    status: str
+    desired_config_version: int
+    applied_config_version: int
+    agent_metadata: Optional[dict]
+
+
+class AgentsResponse(BaseModel):
+    agents: List[Agent]
+    count: int
 
 
 @app.on_event("startup")
@@ -242,6 +260,7 @@ async def get_sensor_timeseries(
 async def get_active_alerts():
     """Get active alerts (for Homepage widget)"""
 
+    db = None
     try:
         db = SessionLocal()
 
@@ -285,13 +304,73 @@ async def get_active_alerts():
 
     except Exception as e:
         logger.error(f"Failed to query alerts: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        if db:
+            db.close()
+        raise HTTPException(status_code=503, detail="Database unavailable")
+
+
+@app.get("/api/v1/agents", response_model=AgentsResponse)
+async def get_agents():
+    """Get list of all registered agents"""
+
+    db = None
+    try:
+        db = SessionLocal()
+
+        from sqlalchemy import text
+        from sqlalchemy.exc import OperationalError, ProgrammingError
+
+        query = text("""
+            SELECT agent_id, hostname, hardware, registered_at,
+                   last_heartbeat, last_sync_at, status,
+                   desired_config_version, applied_config_version, agent_metadata
+            FROM agents
+            ORDER BY registered_at DESC
+        """)
+
+        result = db.execute(query)
+        rows = result.fetchall()
+
+        agents = [
+            Agent(
+                agent_id=row[0],
+                hostname=row[1],
+                hardware=row[2],
+                registered_at=row[3].isoformat() if row[3] else None,
+                last_heartbeat=row[4].isoformat() if row[4] else None,
+                last_sync_at=row[5].isoformat() if row[5] else None,
+                status=row[6] or "unknown",
+                desired_config_version=row[7] or 0,
+                applied_config_version=row[8] or 0,
+                agent_metadata=row[9]
+            )
+            for row in rows
+        ]
+
+        db.close()
+
+        return AgentsResponse(
+            agents=agents,
+            count=len(agents)
+        )
+
+    except (OperationalError, ProgrammingError) as e:
+        logger.error(f"Database error querying agents: {e}")
+        if db:
+            db.close()
+        raise HTTPException(status_code=503, detail="Database unavailable")
+    except Exception as e:
+        logger.error(f"Unexpected error querying agents: {e}")
+        if db:
+            db.close()
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @app.get("/api/v1/fleet/status", response_model=FleetStatusResponse)
 async def get_fleet_status():
     """Get fleet status summary (for Homepage widget)"""
 
+    db = None
     try:
         db = SessionLocal()
 
@@ -335,7 +414,9 @@ async def get_fleet_status():
 
     except Exception as e:
         logger.error(f"Failed to query fleet status: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        if db:
+            db.close()
+        raise HTTPException(status_code=503, detail="Database unavailable")
 
 
 if __name__ == "__main__":

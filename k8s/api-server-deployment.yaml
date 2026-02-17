@@ -21,9 +21,11 @@ spec:
       labels:
         app: api-server
     spec:
+      imagePullSecrets:
+      - name: pull-secret
       containers:
       - name: api-server
-        image: moisture-monitoring/api-server:latest
+        image: quay.nekohouse.ca:8443/moisture-sensor/api-server:v0.3
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8000
@@ -49,6 +51,11 @@ spec:
             secretKeyRef:
               name: api-server-secret
               key: influxdb-bucket
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: orchestrator-secret
+              key: database-url
         - name: LOG_LEVEL
           valueFrom:
             configMapKeyRef:
@@ -87,28 +94,19 @@ spec:
     targetPort: 8000
   type: ClusterIP
 ---
-apiVersion: networking.k8s.io/v1
-kind: Ingress
+apiVersion: route.openshift.io/v1
+kind: Route
 metadata:
-  name: api-server-ingress
+  name: api-server
   namespace: moisture-monitoring
-  annotations:
-    cert-manager.io/cluster-issuer: "letsencrypt-prod"
-    nginx.ingress.kubernetes.io/ssl-redirect: "true"
 spec:
-  ingressClassName: nginx
+  to:
+    kind: Service
+    name: api-server
+    weight: 100
+  port:
+    targetPort: 8000
   tls:
-  - hosts:
-    - api.example.com
-    secretName: api-server-tls
-  rules:
-  - host: api.example.com
-    http:
-      paths:
-      - path: /
-        pathType: Prefix
-        backend:
-          service:
-            name: api-server
-            port:
-              number: 8000
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+  wildcardPolicy: None

@@ -156,7 +156,7 @@ async def get_agent(
         "last_sync_at": agent.last_sync_at.isoformat() if agent.last_sync_at else None,
         "desired_config_version": agent.desired_config_version,
         "applied_config_version": agent.applied_config_version,
-        "metadata": agent.metadata
+        "metadata": agent.agent_metadata
     }
 
 

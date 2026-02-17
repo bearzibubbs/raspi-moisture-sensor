@@ -5,7 +5,7 @@ import os
 
 # Get database URL from environment
 DATABASE_URL = os.getenv(
-    "POSTGRES_URL",
+    "DATABASE_URL",
     "postgresql://postgres:postgres@localhost:5432/moisture_monitoring"
 )
 

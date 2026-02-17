@@ -131,10 +131,10 @@ async def report_health(
     }
 
     # Update or create metadata
-    if agent.metadata:
-        agent.metadata["health"] = health_data
+    if agent.agent_metadata:
+        agent.agent_metadata["health"] = health_data
     else:
-        agent.metadata = {"health": health_data}
+        agent.agent_metadata = {"health": health_data}
 
     db.commit()
 

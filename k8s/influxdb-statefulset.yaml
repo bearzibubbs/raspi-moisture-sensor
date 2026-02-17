@@ -27,6 +27,18 @@ spec:
       labels:
         app: influxdb
     spec:
+      initContainers:
+      - name: fix-permissions
+        image: busybox:latest
+        command: ['sh', '-c']
+        args:
+        - |
+          mkdir -p /var/lib/influxdb2
+          chmod -R 777 /var/lib/influxdb2
+          echo "Fixed permissions on /var/lib/influxdb2"
+        volumeMounts:
+        - name: influxdb-data
+          mountPath: /var/lib/influxdb2
       containers:
       - name: influxdb
         image: influxdb:2.7-alpine
@@ -55,6 +67,8 @@ spec:
             secretKeyRef:
               name: influxdb-secret
               key: admin-token
+        - name: INFLUX_CONFIGS_PATH
+          value: /var/lib/influxdb2/influx-configs
         volumeMounts:
         - name: influxdb-data
           mountPath: /var/lib/influxdb2
