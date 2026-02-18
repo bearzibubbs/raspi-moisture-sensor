@@ -19,7 +19,7 @@ services:
       # Persistent storage for SQLite database
       - ./data:/data
       # Configuration file
-      - ./config.yaml:/app/config.yaml:ro
+      - ./config.yaml:/opt/pi-agent/config.yaml:ro
       - /var/log/pi-agent/:/var/log/pi-agent/:Z
 
     environment:
