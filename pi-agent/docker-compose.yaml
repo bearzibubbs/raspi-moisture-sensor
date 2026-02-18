@@ -28,7 +28,7 @@ services:
       - AGENT_TOKEN=${AGENT_TOKEN}
 
       # Override config file path if needed
-      # - CONFIG_FILE=/app/config.yaml
+      - CONFIG_FILE=/opt/pi-agent/config.yaml
       - AGENT_ID=${AGENT_ID}
 
       # Override database path
