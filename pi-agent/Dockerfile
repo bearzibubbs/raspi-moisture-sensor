@@ -21,7 +21,9 @@ COPY *.py ./
 
 # Create data directory
 RUN mkdir -p /data && \
-    chmod 755 /data
+    chmod 755 /data && \
+    mkdir -p /var/lib/pi-agent && \
+    chmod 755 /var/lib/pi-agent
 
 # Create groups used by the application
 RUN groupadd i2c
