@@ -20,7 +20,7 @@ services:
       - ./data:/data
       # Configuration file
       - ./config.yaml:/app/config.yaml:ro
-      - /var/log/pi-agent/:/var/log/pi-agent/
+      - /var/log/pi-agent/:/var/log/pi-agent/:Z
 
     environment:
       # Orchestrator connection
