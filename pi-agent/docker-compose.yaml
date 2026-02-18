@@ -29,6 +29,7 @@ services:
 
       # Override config file path if needed
       # - CONFIG_FILE=/app/config.yaml
+      - AGENT_ID=${AGENT_ID}
 
       # Override database path
       - DB_PATH=/data/agent.db
