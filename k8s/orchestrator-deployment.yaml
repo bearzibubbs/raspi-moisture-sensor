@@ -26,7 +26,7 @@ spec:
       - name: pull-secret
       containers:
       - name: orchestrator
-        image: quay.nekohouse.ca:8443/moisture-sensor/orchestrator:v0.5
+        image: quay.nekohouse.ca:8443/moisture-sensor/orchestrator:v0.6
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8000

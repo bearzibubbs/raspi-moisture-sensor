@@ -16,11 +16,10 @@ data:
     #!/bin/bash
     set -e
 
-    # Create database if it doesn't exist
-    psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname template1 <<-EOSQL
-        SELECT 'CREATE DATABASE moisture_monitor'
-        WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'moisture_monitor')\gexec
-    EOSQL
+    # Create database if it doesn't exist (idempotent).
+    if ! psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname template1 -tAc "SELECT 1 FROM pg_database WHERE datname = 'moisture_monitor'" | grep -q 1; then
+      psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname template1 -c "CREATE DATABASE moisture_monitor;"
+    fi
 
     echo "Database initialization complete"
 ---
@@ -53,6 +52,15 @@ spec:
       labels:
         app: postgresql
     spec:
+      # OpenShift runs pods with a random UID by default; the postgres image
+      # expects to run as the postgres user (UID 70 in postgres:15-alpine).
+      # Without this, the entrypoint never creates POSTGRES_USER or POSTGRES_DB.
+      # Grant the namespace's default SA an SCC that allows this, e.g.:
+      #   oc adm policy add-scc-to-user anyuid -z default -n moisture-monitoring
+      securityContext:
+        runAsUser: 70
+        runAsGroup: 70
+        fsGroup: 70
       initContainers:
       - name: copy-pg-hba
         image: postgres:15-alpine
