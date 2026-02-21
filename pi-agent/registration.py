@@ -94,7 +94,7 @@ class RegistrationClient:
         headers = {"Authorization": f"Bearer {self.agent_token}"}
 
         try:
-            response = await self.client.post(url, headers=headers)
+            response = await self.client.post(url, headers=headers, json={})
 
             if response.status_code == 200:
                 return response.json()
