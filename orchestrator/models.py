@@ -48,6 +48,18 @@ class BootstrapToken(Base):
     max_uses = Column(Integer, nullable=True)
 
     @staticmethod
+    def hash_token(token: str) -> str:
+        """Hash a token using SHA256 + bcrypt (same algorithm as Agent)."""
+        sha256_hash = hashlib.sha256(token.encode('utf-8')).hexdigest()
+        return pwd_context.hash(sha256_hash)
+
+    @staticmethod
+    def verify_token(plain_token: str, hashed_token: str) -> bool:
+        """Verify a token against its hash."""
+        sha256_hash = hashlib.sha256(plain_token.encode('utf-8')).hexdigest()
+        return pwd_context.verify(sha256_hash, hashed_token)
+
+    @staticmethod
     def generate_token() -> str:
         """Generate a new bootstrap token"""
         return f"bst_k8s_{secrets.token_urlsafe(32)}"

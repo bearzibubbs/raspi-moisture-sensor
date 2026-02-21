@@ -21,19 +21,15 @@ async def verify_bootstrap_token(
     """Verify bootstrap token for agent registration"""
     token = credentials.credentials
 
-    # Hash the token to look up
-    token_hash = BootstrapToken.hash_token(token)
+    # Tokens are stored with bcrypt (random salt), so we must verify against each candidate
+    candidates = db.query(BootstrapToken).all()
+    for bootstrap in candidates:
+        if BootstrapToken.verify_token(token, bootstrap.token_hash):
+            if not bootstrap.is_valid():
+                raise HTTPException(status_code=401, detail="Bootstrap token expired or exhausted")
+            return bootstrap
 
-    # Look up token in database
-    bootstrap = db.query(BootstrapToken).filter_by(token_hash=token_hash).first()
-
-    if not bootstrap:
-        raise HTTPException(status_code=401, detail="Invalid bootstrap token")
-
-    if not bootstrap.is_valid():
-        raise HTTPException(status_code=401, detail="Bootstrap token expired or exhausted")
-
-    return bootstrap
+    raise HTTPException(status_code=401, detail="Invalid bootstrap token")
 
 
 async def verify_agent_token(
