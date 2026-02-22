@@ -25,35 +25,22 @@ class UpdateConfigRequest(BaseModel):
 @router.get("/agents/{agent_id}/config", response_model=ConfigResponse)
 async def get_agent_config(
     agent_id: str,
-    agent: Agent = Depends(verify_agent_token),
     db: Session = Depends(get_db)
 ):
-    """Get configuration for agent (pull-based model)"""
+    """Get configuration for agent (no auth; agents and dashboards can pull by agent_id)"""
 
-    # Verify agent_id matches token
-    if agent.agent_id != agent_id:
-        raise HTTPException(status_code=403, detail="Agent ID mismatch")
+    agent = db.query(Agent).filter_by(agent_id=agent_id).first()
+    if not agent:
+        raise HTTPException(status_code=404, detail="Agent not found")
 
-    # Check if there's a config update available
-    if agent.applied_config_version >= agent.desired_config_version:
-        # No update needed
-        raise HTTPException(status_code=304, detail="Config up to date")
-
-    # Get latest config for this agent
+    # Get config at desired version for this agent
     latest_config = db.query(AgentConfig).filter(
         AgentConfig.agent_id == agent_id,
         AgentConfig.version == agent.desired_config_version
     ).first()
 
     if not latest_config:
-        # No config exists, return default
-        logger.warning(f"No config found for {agent_id}, returning default")
-        return ConfigResponse(
-            version=1,
-            config={}
-        )
-
-    logger.info(f"Config pulled by {agent_id}, version {latest_config.version}")
+        return ConfigResponse(version=1, config={})
 
     return ConfigResponse(
         version=latest_config.version,
