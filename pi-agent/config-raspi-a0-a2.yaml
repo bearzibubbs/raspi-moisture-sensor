@@ -1,0 +1,55 @@
+# Agent config: capacitive on A0 (channel 0), resistive on A2 (channel 2)
+# Use for PUT /agents/{agent_id}/config (body: {"config": <contents below>})
+# Or merge sensors into your local config.yaml
+#
+# Calibration: run calibrate-sensors.py and replace min/max with your values.
+# Capacitive: lower raw = wetter (inverted). Resistive: higher raw = wetter.
+
+agent:
+  id: "YOUR_AGENT_ID"                    # e.g. pi-plant-01 or hostname
+  orchestrator_url: "https://your-orchestrator.example.com"
+  bootstrap_token: null
+  agent_token: null
+  sync_interval_seconds: 60
+  config_pull_interval_seconds: 300
+
+local_api:
+  enabled: true
+  port: 8080
+  bearer_token: null
+
+storage:
+  database_path: "/data/agent.db"
+  cleanup_synced_older_than_days: 30
+  max_db_size_mb: 500
+
+sensors:
+  # A0 – capacitive (inverted: low raw = wet)
+  - channel: 0
+    type: capacitive
+    calibration:
+      min: 350   # raw when wet (replace after calibration)
+      max: 750   # raw when dry
+    labels:
+      location: "Room A"
+      plant_type: "Houseplant"
+      sensor_name: "A0-capacitive"
+    thresholds:
+      dry_percent: 30
+      wet_percent: 85
+      hysteresis: 5
+
+  # A2 – resistive (normal: high raw = wet)
+  - channel: 2
+    type: resistive
+    calibration:
+      min: 200   # raw when dry (replace after calibration)
+      max: 800   # raw when wet
+    labels:
+      location: "Room A"
+      plant_type: "Houseplant"
+      sensor_name: "A2-resistive"
+    thresholds:
+      dry_percent: 30
+      wet_percent: 85
+      hysteresis: 5

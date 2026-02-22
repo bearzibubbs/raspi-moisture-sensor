@@ -53,6 +53,12 @@ def init_api(config: AgentConfig, storage: StorageManager, start_time: float):
     _agent_start_time = start_time
 
 
+def set_config(config: AgentConfig):
+    """Update in-memory config (e.g. after pulling from orchestrator)"""
+    global _config
+    _config = config
+
+
 def verify_bearer_token(authorization: str = Header(None)):
     """Verify bearer token from local_api settings"""
     if not _config or not _config.local_api.bearer_token:

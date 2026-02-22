@@ -19,7 +19,7 @@ from registration import RegistrationClient
 from sync import SyncClient
 from config_manager import ConfigManager
 from scheduler import AgentScheduler
-from api import app, init_api
+from api import app, init_api, set_config as api_set_config
 
 
 # Configure logging
@@ -79,6 +79,11 @@ class PiAgent:
                 "Agent not registered and no bootstrap token configured. "
                 "Set BOOTSTRAP_TOKEN environment variable."
             )
+        if not agent_token and self.config.agent.bootstrap_token and not self.config.agent.bootstrap_token.startswith("bst_k8s_"):
+            logger.warning(
+                "Bootstrap token does not look substituted (expected bst_k8s_...). "
+                "Ensure BOOTSTRAP_TOKEN is set in the environment where the agent process runs."
+            )
 
         # Initialize registration client
         self.registration_client = RegistrationClient(
@@ -133,7 +138,8 @@ class PiAgent:
             storage=self.storage,
             sync_client=self.sync_client,
             config_manager=self.config_manager,
-            adc=self.adc
+            adc=self.adc,
+            on_config_applied=self._reload_config
         )
 
         logger.info("Agent initialization complete")
@@ -162,12 +168,25 @@ class PiAgent:
             logger.error(f"Agent registration failed: {e}")
             raise
 
+    async def _reload_config(self, config_dict: dict):
+        """Reload in-memory config after pull from orchestrator (no restart needed)."""
+        try:
+            self.config = AgentConfig(**config_dict)
+            api_set_config(self.config)
+            self.scheduler.set_config(self.config)
+            logger.info("Config reloaded from orchestrator")
+        except Exception as e:
+            logger.error(f"Failed to reload config: {e}", exc_info=True)
+
     async def run(self):
         """Run the agent"""
         try:
             await self.initialize()
 
             self.running = True
+
+            # Pull config once at startup so we're in sync with orchestrator immediately
+            await self.scheduler._check_config_updates()
 
             # Start scheduler
             self.scheduler.start()

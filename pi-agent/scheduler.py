@@ -1,6 +1,6 @@
 import logging
 import asyncio
-from typing import List, Optional
+from typing import List, Optional, Callable, Awaitable
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 from collector import SensorCollector
@@ -20,7 +20,8 @@ class AgentScheduler:
         storage: StorageManager,
         sync_client: SyncClient,
         config_manager: ConfigManager,
-        adc
+        adc,
+        on_config_applied: Optional[Callable[[dict], Awaitable[None]]] = None
     ):
         """
         Initialize agent scheduler.
@@ -31,12 +32,14 @@ class AgentScheduler:
             sync_client: SyncClient for uploading readings
             config_manager: ConfigManager for config updates
             adc: ADC instance from grove.py
+            on_config_applied: Optional async callback(new_config_dict) when config is applied
         """
         self.config = config
         self.storage = storage
         self.sync_client = sync_client
         self.config_manager = config_manager
         self.adc = adc
+        self.on_config_applied = on_config_applied
 
         # Create sensor collectors
         self.collectors: List[SensorCollector] = []
@@ -142,17 +145,27 @@ class AgentScheduler:
 
             if has_update:
                 logger.info("Config update available, applying...")
-                updated = await self.config_manager.apply_config_update()
+                new_config_dict = await self.config_manager.apply_config_update()
 
-                if updated:
-                    logger.warning(
-                        "Config updated! Agent restart required to apply changes."
-                    )
-                    # In production, this would trigger agent restart
-                    # For now, just log a warning
+                if new_config_dict is not None:
+                    if self.on_config_applied:
+                        await self.on_config_applied(new_config_dict)
+                    else:
+                        logger.warning(
+                            "Config file updated. Restart agent to use new config."
+                        )
 
         except Exception as e:
             logger.warning(f"Config update check failed: {e}")
+
+    def set_config(self, config: AgentConfig):
+        """Update in-memory config and rebuild sensor collectors (e.g. after config pull)."""
+        self.config = config
+        self.collectors = [
+            SensorCollector(self.adc, sensor_config)
+            for sensor_config in config.sensors
+        ]
+        logger.info(f"Reloaded config: {len(config.sensors)} sensor(s)")
 
     async def _cleanup_old_readings(self):
         """Cleanup old synced readings from storage"""

@@ -86,7 +86,7 @@ class ConfigManager:
         Check if config has been updated on orchestrator.
 
         Returns:
-            True if update available, False otherwise
+            True if update available (or first pull with valid config), False otherwise
 
         Raises:
             ConfigUpdateError: If check operation fails
@@ -97,10 +97,15 @@ class ConfigManager:
             return False
 
         new_version = config_data.get('version')
+        config_content = config_data.get('config')
 
+        # First check: apply orchestrator config so local file matches (if we have valid content)
         if self.current_version is None:
-            # First check - establish baseline
-            self.current_version = new_version
+            if config_content:
+                logger.info("First config pull: applying orchestrator config")
+                return True
+            # No config on orchestrator yet - just set baseline so we don't treat future v1 as "update"
+            self.current_version = new_version or 0
             return False
 
         if new_version and new_version > self.current_version:
@@ -109,12 +114,12 @@ class ConfigManager:
 
         return False
 
-    async def apply_config_update(self) -> bool:
+    async def apply_config_update(self) -> Optional[Dict[str, Any]]:
         """
         Pull config from orchestrator and apply to local file.
 
         Returns:
-            True if config was updated, False if no update available
+            The new config dict if config was updated, None if no update available
 
         Raises:
             ConfigUpdateError: If update operation fails
@@ -123,13 +128,14 @@ class ConfigManager:
 
         if config_data is None:
             logger.debug("No config update available")
-            return False
+            return None
 
         new_version = config_data.get('version')
         config_content = config_data.get('config')
 
         if not config_content:
-            raise ConfigUpdateError("Config data missing 'config' field")
+            logger.debug("Orchestrator has no config content yet, skipping apply")
+            return None
 
         # Validate config before applying
         try:
@@ -154,7 +160,7 @@ class ConfigManager:
 
             self.current_version = new_version
             logger.info(f"Config updated successfully to version {new_version}")
-            return True
+            return config_content
 
         except Exception as e:
             error_msg = f"Failed to write config file: {e}"
