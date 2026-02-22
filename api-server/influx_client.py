@@ -27,12 +27,14 @@ class InfluxQueryClient:
 
     def get_current_readings(self) -> List[Dict[str, Any]]:
         """Get the most recent reading for each sensor"""
+        # Cast _value to float before pivot to avoid "schema collision: cannot group float and integer"
         query = f'''
         from(bucket: "{self.bucket}")
             |> range(start: -1h)
             |> filter(fn: (r) => r["_measurement"] == "moisture_reading")
             |> group(columns: ["agent_id", "sensor_channel"])
             |> last()
+            |> map(fn: (r) => ({{ r with _value: float(v: r._value) }}))
             |> pivot(rowKey:["_time"], columnKey: ["_field"], valueColumn: "_value")
         '''
 
