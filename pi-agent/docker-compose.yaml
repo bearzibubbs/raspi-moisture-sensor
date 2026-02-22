@@ -18,18 +18,22 @@ services:
     volumes:
       # Persistent storage for SQLite database
       - ./data:/data
-      # Configuration file
-      - ./config.yaml:/opt/pi-agent/config.yaml:ro
+      # Config directory (writable so agent can pull updates and write backup)
+      # Put your config at ./config/config.yaml (e.g. cp config.yaml config/)
+      - ./config:/opt/pi-agent:rw
       - /var/log/pi-agent/:/var/log/pi-agent/:Z
 
     environment:
       # Orchestrator connection
       - ORCHESTRATOR_URL=${ORCHESTRATOR_URL}
+      - AGENT_ID=${AGENT_ID}
+      # For first-time registration (from POST /agents/bootstrap-tokens)
+      - BOOTSTRAP_TOKEN=${BOOTSTRAP_TOKEN}
+      # After registration (auto-stored by agent; set for restarts if needed)
       - AGENT_TOKEN=${AGENT_TOKEN}
 
-      # Override config file path if needed
+      # Config file inside the mounted config dir
       - CONFIG_FILE=/opt/pi-agent/config.yaml
-      - AGENT_ID=${AGENT_ID}
 
       # Override database path
       - DB_PATH=/data/agent.db
