@@ -10,6 +10,7 @@ pwd_context = CryptContext(schemes=["sha256_crypt"], deprecated="auto")
 
 class Agent(Base):
     __tablename__ = "agents"
+    __table_args__ = {"schema": "public"}
 
     agent_id = Column(String(255), primary_key=True)
     hostname = Column(String(255))
@@ -40,6 +41,7 @@ class Agent(Base):
 
 class BootstrapToken(Base):
     __tablename__ = "bootstrap_tokens"
+    __table_args__ = {"schema": "public"}
 
     token_hash = Column(String(255), primary_key=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
@@ -80,9 +82,10 @@ class BootstrapToken(Base):
 
 class AlertRule(Base):
     __tablename__ = "alert_rules"
+    __table_args__ = {"schema": "public"}
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    agent_id = Column(String(255), ForeignKey('agents.agent_id'))
+    agent_id = Column(String(255), ForeignKey('public.agents.agent_id'))
     sensor_channel = Column(Integer)
     dry_threshold = Column(Float)
     wet_threshold = Column(Float)
@@ -91,9 +94,10 @@ class AlertRule(Base):
 
 class ActiveAlert(Base):
     __tablename__ = "active_alerts"
+    __table_args__ = {"schema": "public"}
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    agent_id = Column(String(255), ForeignKey('agents.agent_id'))
+    agent_id = Column(String(255), ForeignKey('public.agents.agent_id'))
     sensor_channel = Column(Integer)
     alert_type = Column(String(50))  # 'too_dry', 'too_wet', 'sensor_offline', 'agent_offline'
     triggered_at = Column(DateTime(timezone=True), server_default=func.now())
@@ -108,9 +112,10 @@ class ActiveAlert(Base):
 
 class AgentConfig(Base):
     __tablename__ = "agent_configs"
+    __table_args__ = {"schema": "public"}
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    agent_id = Column(String(255), ForeignKey('agents.agent_id'))
+    agent_id = Column(String(255), ForeignKey('public.agents.agent_id'))
     version = Column(Integer, nullable=False)
     config_data = Column(JSON, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
