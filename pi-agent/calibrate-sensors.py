@@ -27,9 +27,9 @@ def banner():
     print("=" * 70)
     print()
     print("This tool will help you:")
-    print("  1. Detect which ADC channels have sensors connected")
-    print("  2. Calibrate each sensor (dry/wet readings)")
-    print("  3. Auto-detect sensor type (capacitive vs resistive)")
+    print("  1. Detect ADC hardware (Grove, ADS1115, or MCP3008)")
+    print("  2. Choose which channel(s) to calibrate")
+    print("  3. Calibrate each sensor (dry/wet readings, auto-detect type)")
     print("  4. Generate configuration for orchestrator")
     print()
 
@@ -157,65 +157,53 @@ def read_channel(adc_type: str, adc, channel: int) -> Optional[int]:
         return None
 
 
-def scan_channels(adc_type: str, adc) -> List[int]:
+def get_available_channels(adc_type: str) -> List[int]:
+    """Return the list of valid channel numbers for this ADC type."""
+    if adc_type == "Grove":
+        return [0, 2, 4, 6]  # Grove Base HAT analog ports A0, A2, A4, A6
+    if adc_type == "ADS1115":
+        return list(range(4))
+    return list(range(8))
+
+
+def choose_channels(adc_type: str) -> List[int]:
     """
-    Scan all ADC channels to find connected sensors.
+    Ask the user which channel(s) to calibrate (no auto-detection).
 
     Returns:
-        List of channel numbers with sensors detected
+        Sorted list of channel numbers to calibrate
     """
-    print("[2/5] Scanning for connected sensors...")
+    valid = get_available_channels(adc_type)
+    print("[2/5] Choose channel(s) to calibrate")
     print()
-
+    print(f"  Valid channels for {adc_type}: {valid}")
     if adc_type == "Grove":
-        channels_to_scan = [0, 2, 4, 6]  # Grove analog ports
-    elif adc_type == "ADS1115":
-        channels_to_scan = list(range(4))
-    else:
-        channels_to_scan = list(range(8))
-
-    active_channels = []
-    for ch in channels_to_scan:
-        sys.stdout.write(f"  Channel {ch}: ")
-        sys.stdout.flush()
-
-        # Take multiple readings to check for stability
-        readings = []
-        for _ in range(5):
-            val = read_channel(adc_type, adc, ch)
-            if val is not None:
-                readings.append(val)
-            time.sleep(0.1)
-
-        if not readings:
-            print("No signal")
-            continue
-
-        avg = sum(readings) / len(readings)
-        variance = sum((x - avg) ** 2 for x in readings) / len(readings)
-
-        # Sensors typically have some variance; floating pins read ~0 or max
-        if adc_type == "Grove":
-            # 10-bit ADC: 0-1023, expect sensor in middle range with some variance
-            is_sensor = 50 < avg < 1000 and (variance > 5 or len(readings) >= 3)
-        else:
-            is_sensor = 100 < avg < 30000 and variance > 10
-        if is_sensor:
-            print(f"✓ Sensor detected (avg: {int(avg)})")
-            active_channels.append(ch)
-        else:
-            print(f"No sensor (floating pin, avg: {int(avg)})")
-
+        print("  (Grove Base HAT: 0=A0, 2=A2, 4=A4, 6=A6)")
     print()
-    if not active_channels:
-        print("❌ No sensors detected on any channel!")
-        print("   Check your wiring and try again.")
+    prompt = "  Enter channel(s), comma or space separated (e.g. 0, 2 or 0 2): "
+    raw = input(prompt).strip()
+    if not raw:
+        print("  No channels entered. Exiting.")
         sys.exit(1)
-
-    print(f"✓ Found {len(active_channels)} sensor(s) on channel(s): {active_channels}")
+    # Parse: allow "0, 2", "0 2", "0,2"
+    parts = raw.replace(",", " ").split()
+    chosen = []
+    for p in parts:
+        try:
+            ch = int(p)
+            if ch in valid:
+                chosen.append(ch)
+            else:
+                print(f"  ⚠ Skipping {ch} (not in {valid})")
+        except ValueError:
+            print(f"  ⚠ Skipping '{p}' (not a number)")
+    chosen = sorted(set(chosen))
+    if not chosen:
+        print("  No valid channels. Exiting.")
+        sys.exit(1)
+    print(f"  ✓ Will calibrate channel(s): {chosen}")
     print()
-
-    return active_channels
+    return chosen
 
 
 def calibrate_sensor(adc_type: str, adc, channel: int) -> Dict:
@@ -354,8 +342,8 @@ def main():
     # Detect ADC
     adc_type, adc = detect_adc()
 
-    # Scan for sensors
-    channels = scan_channels(adc_type, adc)
+    # Choose which channels to calibrate (no auto-detect)
+    channels = choose_channels(adc_type)
 
     # Calibrate each sensor
     print("[3/5] Calibrating sensors...")
