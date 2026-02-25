@@ -44,7 +44,21 @@ def detect_adc() -> Tuple[str, object]:
     print("[1/5] Detecting ADC hardware...")
     print()
 
-    # Try ADS1115 first (I2C)
+    # Try Grove Base HAT first (same as pi-agent uses)
+    try:
+        from grove.adc import ADC
+        adc = ADC()
+        # Test read channel 0 (Grove A0)
+        val = adc.read(0)
+        if val is not None:
+            print("✓ Found Grove Base HAT ADC (grove.py)")
+            print("  Analog channels: 0, 2, 4, 6 (A0, A2, A4, A6)")
+            print()
+            return ("Grove", adc)
+    except Exception as e:
+        print(f"  Grove ADC not found: {e}")
+
+    # Try ADS1115 (I2C)
     try:
         import board
         import busio
@@ -103,9 +117,15 @@ def read_channel(adc_type: str, adc, channel: int) -> Optional[int]:
     Read a single channel from the ADC.
 
     Returns:
-        Raw ADC value (0-32767 for ADS1115, 0-1023 for MCP3008) or None
+        Raw ADC value (0-1023 for Grove, 0-32767 for ADS1115, 0-1023 for MCP3008) or None
     """
     try:
+        if adc_type == "Grove":
+            # Grove Base HAT: channels 0, 2, 4, 6
+            if channel not in (0, 2, 4, 6):
+                return None
+            return adc.read(channel)
+
         if adc_type == "ADS1115":
             import adafruit_ads1x15.ads1115 as ADS
             from adafruit_ads1x15.analog_in import AnalogIn
@@ -117,7 +137,7 @@ def read_channel(adc_type: str, adc, channel: int) -> Optional[int]:
             analog_in = AnalogIn(adc, channel_map[channel])
             return analog_in.value
 
-        else:  # MCP3008
+        elif adc_type == "MCP3008":
             import adafruit_mcp3xxx.mcp3008 as MCP
             from adafruit_mcp3xxx.analog_in import AnalogIn
 
@@ -128,6 +148,9 @@ def read_channel(adc_type: str, adc, channel: int) -> Optional[int]:
 
             analog_in = AnalogIn(adc, channel_map[channel])
             return analog_in.value
+
+        else:
+            return None
 
     except Exception as e:
         print(f"    Error reading channel {channel}: {e}")
@@ -144,10 +167,15 @@ def scan_channels(adc_type: str, adc) -> List[int]:
     print("[2/5] Scanning for connected sensors...")
     print()
 
-    max_channels = 4 if adc_type == "ADS1115" else 8
-    active_channels = []
+    if adc_type == "Grove":
+        channels_to_scan = [0, 2, 4, 6]  # Grove analog ports
+    elif adc_type == "ADS1115":
+        channels_to_scan = list(range(4))
+    else:
+        channels_to_scan = list(range(8))
 
-    for ch in range(max_channels):
+    active_channels = []
+    for ch in channels_to_scan:
         sys.stdout.write(f"  Channel {ch}: ")
         sys.stdout.flush()
 
@@ -166,8 +194,13 @@ def scan_channels(adc_type: str, adc) -> List[int]:
         avg = sum(readings) / len(readings)
         variance = sum((x - avg) ** 2 for x in readings) / len(readings)
 
-        # Sensors typically have some variance, disconnected pins read ~0 or max
-        if 100 < avg < 30000 and variance > 10:
+        # Sensors typically have some variance; floating pins read ~0 or max
+        if adc_type == "Grove":
+            # 10-bit ADC: 0-1023, expect sensor in middle range with some variance
+            is_sensor = 50 < avg < 1000 and (variance > 5 or len(readings) >= 3)
+        else:
+            is_sensor = 100 < avg < 30000 and variance > 10
+        if is_sensor:
             print(f"✓ Sensor detected (avg: {int(avg)})")
             active_channels.append(ch)
         else:
