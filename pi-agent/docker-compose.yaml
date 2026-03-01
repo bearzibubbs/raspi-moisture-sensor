@@ -22,11 +22,11 @@ services:
       # Put your config at ./config/config.yaml (e.g. cp config.yaml config/)
       - ./config:/opt/pi-agent:rw
       - /var/log/pi-agent/:/var/log/pi-agent/:Z
-      # RPi.GPIO (used by grove.py) checks these to detect Raspberry Pi; mount host's so it passes in container
-      - /proc/device-tree:/proc/device-tree:ro
-      - /proc/cpuinfo:/proc/cpuinfo:ro
 
     environment:
+      # rpi-lgpio (replacement for RPi.GPIO): board revision so it works in container without /proc mounts
+      # Pi Zero 2 W = 902120; others: https://www.raspberrypi.com/documentation/computers/raspberry-pi.html
+      - RPI_LGPIO_REVISION=${RPI_LGPIO_REVISION:-902120}
       # Orchestrator connection
       - ORCHESTRATOR_URL=${ORCHESTRATOR_URL}
       - AGENT_ID=${AGENT_ID}

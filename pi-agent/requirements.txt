@@ -7,6 +7,7 @@ apscheduler==3.10.4
 python-multipart==0.0.6
 grove.py==0.6
 smbus2>=0.4.0
-RPi.GPIO>=0.7.0
+# rpi-lgpio: drop-in RPi.GPIO replacement; uses RPI_LGPIO_REVISION env so /proc mounts not needed in container
+rpi-lgpio>=0.6.0
 pyyaml==6.0.1
 psutil==5.9.8
