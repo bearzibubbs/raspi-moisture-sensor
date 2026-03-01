@@ -22,6 +22,9 @@ services:
       # Put your config at ./config/config.yaml (e.g. cp config.yaml config/)
       - ./config:/opt/pi-agent:rw
       - /var/log/pi-agent/:/var/log/pi-agent/:Z
+      # RPi.GPIO (used by grove.py) checks these to detect Raspberry Pi; mount host's so it passes in container
+      - /proc/device-tree:/proc/device-tree:ro
+      - /proc/cpuinfo:/proc/cpuinfo:ro
 
     environment:
       # Orchestrator connection

@@ -56,6 +56,34 @@ podman-compose ps
 curl http://localhost:8080/health
 ```
 
+**RPi.GPIO / "can only be run on a Raspberry Pi":**  
+RPi.GPIO (used by grove.py) checks `/proc/device-tree` and `/proc/cpuinfo` to confirm it's on a Pi. In a container those paths may be missing or wrong. Mount the **host's** proc paths into the container:
+
+- **Docker/Podman (compose):** The included `docker-compose.yaml` mounts `/proc/device-tree`. If you still see the error, add `/proc/cpuinfo` (e.g. `- /proc/cpuinfo:/proc/cpuinfo:ro`). Run the container on the Pi host.
+- **Kubernetes (run pod on the Pi node):** Add hostPath volumes and mount them read-only:
+
+```yaml
+volumes:
+  - name: device-tree
+    hostPath:
+      path: /proc/device-tree
+      type: Directory
+  - name: cpuinfo
+    hostPath:
+      path: /proc/cpuinfo
+      type: File
+# In container spec:
+volumeMounts:
+  - name: device-tree
+    mountPath: /proc/device-tree
+    readOnly: true
+  - name: cpuinfo
+    mountPath: /proc/cpuinfo
+    readOnly: true
+```
+
+Ensure the pod is scheduled on the Raspberry Pi node (nodeSelector / taints) and that I2C device access is allowed (e.g. `hostPath` for `/dev/i2c-1` or securityContext as needed).
+
 **Building the Image:**
 
 ```bash

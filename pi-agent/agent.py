@@ -135,7 +135,17 @@ class PiAgent:
             logger.warning(
                 "grove.py not available, running in simulation mode: %s", e
             )
-            # Mock ADC for testing without hardware
+            self.adc = MockADC()
+        except RuntimeError as e:
+            if "Raspberry Pi" in str(e):
+                logger.warning(
+                    "RPi.GPIO rejected environment (not detected as Pi). "
+                    "Mount host /proc/device-tree and /proc/cpuinfo into the container so RPi.GPIO can detect the Pi. "
+                    "Running in simulation mode: %s",
+                    e,
+                )
+            else:
+                raise
             self.adc = MockADC()
 
         # Initialize API
