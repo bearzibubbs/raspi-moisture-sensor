@@ -24,8 +24,8 @@ services:
       - /var/log/pi-agent/:/var/log/pi-agent/:Z
 
     environment:
-      # rpi-lgpio: board revision in hex (6 digits). Pi Zero 2 W = 0x0DC268; override in .env if needed
-      - RPI_LGPIO_REVISION=0dc268
+      # rpi-lgpio: board revision in hex (6 digits). Use c03114 (Pi 4B) for compatibility; I2C still works on Zero 2 W
+      - RPI_LGPIO_REVISION=c03114
       # Orchestrator connection
       - ORCHESTRATOR_URL=${ORCHESTRATOR_URL}
       - AGENT_ID=${AGENT_ID}
