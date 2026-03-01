@@ -65,10 +65,13 @@ class PiAgent:
         # Load configuration
         logger.info(f"Loading configuration from {self.config_path}")
         self.config = AgentConfig.from_yaml(self.config_path)
-        # Environment overrides: ORCHESTRATOR_URL so containers/K8s can set it without editing config
+        # Environment overrides so containers/K8s can set these without editing config
         if os.getenv("ORCHESTRATOR_URL"):
             self.config.agent.orchestrator_url = os.getenv("ORCHESTRATOR_URL").strip()
             logger.info("Using ORCHESTRATOR_URL from environment")
+        if os.getenv("AGENT_ID"):
+            self.config.agent.id = os.getenv("AGENT_ID").strip()
+            logger.info("Using AGENT_ID from environment")
         logger.info(f"Agent ID: {self.config.agent.id}")
         logger.info(f"Orchestrator: {self.config.agent.orchestrator_url}")
 
