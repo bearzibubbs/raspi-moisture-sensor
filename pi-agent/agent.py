@@ -65,6 +65,7 @@ class PiAgent:
         logger.info(f"Loading configuration from {self.config_path}")
         self.config = AgentConfig.from_yaml(self.config_path)
         logger.info(f"Agent ID: {self.config.agent.id}")
+        logger.info(f"Orchestrator: {self.config.agent.orchestrator_url}")
 
         # Initialize storage
         logger.info("Initializing storage")
