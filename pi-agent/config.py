@@ -19,13 +19,14 @@ class SensorThresholds(BaseModel):
 
 
 class SensorCalibration(BaseModel):
-    min: int = Field(..., ge=0, le=1023)
-    max: int = Field(..., ge=0, le=1023)
+    # Grove Base HAT ADC is 12-bit (0-4095); other ADCs may differ but fit in this range
+    min: int = Field(..., ge=0, le=4095)
+    max: int = Field(..., ge=0, le=4095)
 
 
 class SensorConfig(BaseModel):
     channel: int = Field(..., ge=0, le=7)
-    type: str = Field(..., pattern="^(capacitive|resistive)$")
+    type: str = Field(..., pattern="^(capacitive|resistive|resistive_inverted)$")
     calibration: SensorCalibration
     labels: SensorLabels
     thresholds: SensorThresholds

@@ -117,14 +117,14 @@ def read_channel(adc_type: str, adc, channel: int) -> Optional[int]:
     Read a single channel from the ADC.
 
     Returns:
-        Raw ADC value (0-1023 for Grove, 0-32767 for ADS1115, 0-1023 for MCP3008) or None
+        Raw ADC value (0-4095 for Grove 12-bit, 0-32767 for ADS1115, 0-1023 for MCP3008) or None
     """
     try:
         if adc_type == "Grove":
-            # Grove Base HAT: channels 0, 2, 4, 6
+            # Grove Base HAT: channels 0, 2, 4, 6. Use read_raw() for 12-bit 0-4095 (not read() which returns ratio 0-1000).
             if channel not in (0, 2, 4, 6):
                 return None
-            return adc.read(channel)
+            return adc.read_raw(channel)
 
         if adc_type == "ADS1115":
             import adafruit_ads1x15.ads1115 as ADS
@@ -289,14 +289,24 @@ def calibrate_sensor(adc_type: str, adc, channel: int) -> Dict:
     print()
 
     # Confirm with user
+    detected_inverted = dry_value > wet_value  # dry > wet => inverted scale
     confirm = input(f"  Is this a {sensor_type} sensor? [Y/n]: ").strip().lower()
     if confirm and confirm != 'y':
         print()
         print("  What type is it?")
         print("    1. Capacitive")
-        print("    2. Resistive")
-        choice = input("  Enter 1 or 2: ").strip()
-        sensor_type = "capacitive" if choice == "1" else "resistive"
+        print("    2. Resistive (normal: high raw = wet)")
+        print("    3. Resistive (inverted: high raw = dry — use if resistive shows 100% in air)")
+        choice = input("  Enter 1, 2, or 3: ").strip()
+        if choice == "1":
+            sensor_type = "capacitive"
+        elif choice == "3":
+            sensor_type = "resistive_inverted"
+        else:
+            sensor_type = "resistive"
+            if detected_inverted:
+                sensor_type = "resistive_inverted"
+                print("  (Readings were Dry > Wet, so using resistive_inverted so dry air → 0%)")
         print(f"  ✓ Sensor type set to: {sensor_type}")
 
     print()
@@ -381,17 +391,21 @@ def main():
     print("[5/5] ORCHESTRATOR CONFIGURATION")
     print("=" * 70)
     print()
-    print("Copy this configuration and push to the orchestrator:")
+    print("This output is only the 'sensors' section. The orchestrator expects a FULL")
+    print("config (agent, sensors, local_api, storage). Merge this into your existing")
+    print("config.yaml / agent config and send the full object as body.")
+    print()
+    print("Copy this sensors block and merge into full config, then push:")
     print()
     print("```json")
     print(json.dumps(orchestrator_config, indent=2))
     print("```")
     print()
-    print("To apply this configuration to your agent:")
+    print("To apply (body must be {\"config\": {agent, sensors, local_api, storage}}):")
     print()
     print("  curl -X PUT https://orchestrator.example.com/agents/YOUR_AGENT_ID/config \\")
     print("    -H 'Content-Type: application/json' \\")
-    print("    -d '" + json.dumps(orchestrator_config) + "'")
+    print("    -d '{\"config\": { ... full config with agent, sensors, local_api, storage ... }}'")
     print()
 
     # Save to file

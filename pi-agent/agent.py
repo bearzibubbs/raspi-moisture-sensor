@@ -122,7 +122,9 @@ class PiAgent:
         logger.info("Initializing ADC")
         try:
             from grove.adc import ADC
-            self.adc = ADC()
+            grove_adc = ADC()
+            # Grove read() returns ratio in 0.1% (0-1000); use read_raw() for 12-bit 0-4095 so calibration and agent use same scale
+            self.adc = _GroveRawADC(grove_adc)
         except ImportError:
             logger.warning("grove.py not available, running in simulation mode")
             # Mock ADC for testing without hardware
@@ -258,13 +260,21 @@ class PiAgent:
         logger.info("Agent shutdown complete")
 
 
+class _GroveRawADC:
+    """Wraps Grove ADC so read(channel) returns 12-bit raw (0-4095), matching calibrate-sensors and avoiding ratio (0-1000) confusion."""
+    def __init__(self, grove_adc):
+        self._adc = grove_adc
+
+    def read(self, channel):
+        return self._adc.read_raw(channel)
+
+
 class MockADC:
     """Mock ADC for testing without hardware"""
     def read(self, channel):
-        """Return simulated ADC value"""
+        """Return simulated ADC value (0-4095 scale for Grove compatibility)"""
         import random
-        # Simulate capacitive sensor values (300-800 range)
-        return random.randint(400, 700)
+        return random.randint(400, 2500)
 
 
 async def main():
