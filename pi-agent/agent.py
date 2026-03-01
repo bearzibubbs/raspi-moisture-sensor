@@ -131,8 +131,10 @@ class PiAgent:
             grove_adc = ADC()
             # Grove read() returns ratio in 0.1% (0-1000); use read_raw() for 12-bit 0-4095 so calibration and agent use same scale
             self.adc = _GroveRawADC(grove_adc)
-        except ImportError:
-            logger.warning("grove.py not available, running in simulation mode")
+        except ImportError as e:
+            logger.warning(
+                "grove.py not available, running in simulation mode: %s", e
+            )
             # Mock ADC for testing without hardware
             self.adc = MockADC()
 
