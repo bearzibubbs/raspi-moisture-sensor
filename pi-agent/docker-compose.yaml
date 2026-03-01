@@ -7,7 +7,10 @@ services:
     container_name: moisture-pi-agent
     restart: unless-stopped
 
-    # I2C hardware access
+    # I2C hardware access: pass device and add host i2c group so container user can open it
+    # On Raspberry Pi OS the i2c group is usually GID 998; if Permission denied, check: getent group i2c
+    group_add:
+      - "998"
     devices:
       - /dev/i2c-1:/dev/i2c-1
 
