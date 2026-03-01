@@ -7,7 +7,9 @@ services:
     container_name: moisture-pi-agent
     restart: unless-stopped
 
-    # I2C: run as root so container can open /dev/i2c-1 (group_add often unreliable with Podman)
+    # Privileged container required for I2C. With Podman you must run as root so privileged takes effect:
+    #   sudo podman-compose up -d
+    privileged: true
     user: "0"
     devices:
       - /dev/i2c-1:/dev/i2c-1
