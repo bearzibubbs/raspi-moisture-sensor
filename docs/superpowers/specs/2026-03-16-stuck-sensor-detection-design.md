@@ -183,6 +183,13 @@ def resolve_stuck(self, agent_id, sensor_channel):
         self._resolve_alert(alert)
 ```
 
+## Implementation Notes
+
+- `store_reading()` in `storage.py` has a hardcoded column list in its INSERT — `stuck` must be added explicitly (it does not use `**asdict(reading)`).
+- `AlertEngine(db)` should be instantiated **once** outside the readings loop in `upload_readings`, not per reading.
+- The `if r.stuck / else` ordering in the ingestion loop is load-bearing: the existing `check_reading()` queries `ActiveAlert` without filtering by `alert_type`, so a live `sensor_stuck` alert would block `too_dry`/`too_wet` creation if both branches ran. Only calling `check_reading()` in the `else` branch avoids this collision.
+- **InfluxDB `stuck` field:** `influx.py`'s `write_readings()` currently writes only `raw_value` and `moisture_percent`. Whether `stuck` should also be stored as an InfluxDB tag or field is left to the implementer — it enables future dashboard queries (e.g. "show when sensor was stuck") but is not required for alert functionality.
+
 ## Data Flow
 
 ```
