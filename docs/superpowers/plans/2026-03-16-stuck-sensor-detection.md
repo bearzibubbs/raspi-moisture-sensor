@@ -267,7 +267,6 @@ git commit -m "feat(pi-agent): add stuck field to Reading and SQLite storage"
 Add the following imports at the top of `pi-agent/tests/test_collector.py` (alongside existing imports):
 
 ```python
-from collections import deque
 from unittest.mock import MagicMock
 from config import SensorConfig, StuckDetectionConfig
 ```
@@ -398,7 +397,14 @@ Update the `Reading(...)` constructor call to pass `stuck=stuck`.
 cd pi-agent && python -m pytest tests/test_collector.py -v
 ```
 
-Expected: all tests PASS (including the pre-existing `resistive_inverted` test).
+Expected: all tests PASS.
+
+> **Note:** There is a pre-existing bug where `test_calculate_moisture_resistive_inverted` may already
+> be failing — the `calculate_moisture_percent` function doesn't have an explicit `resistive_inverted`
+> branch, so it falls into the resistive `else` path and gives wrong results. If this test is failing
+> before you start, it is not caused by your changes. Fix it by adding a `resistive_inverted` branch
+> to `calculate_moisture_percent` that uses the capacitive formula: `((sensor_max - raw_value) / span) * 100`.
+> This is a one-line addition to the if/elif/else chain.
 
 - [ ] **Step 5: Commit**
 
@@ -690,11 +696,16 @@ Replace the existing `from typing import List` line with:
 from typing import List, Optional, Dict
 ```
 
-Add to the existing model imports:
+Replace `from models import Agent` (the existing import) with:
+
+```python
+from models import Agent, AgentConfig
+```
+
+Add alongside the other imports:
 
 ```python
 from alerts import AlertEngine
-from models import Agent, AgentConfig
 ```
 
 - [ ] **Step 4: Add `_get_sensor_thresholds` helper to `ingestion.py`**
@@ -792,7 +803,7 @@ with its own nested try/except so alert failures never propagate to the outer HT
 > **Note:** Remove the existing `logger.info(f"Accepted {written}...")` line that was before the
 > `return` — it's included in the block above to preserve its position after alert processing.
 
-- [ ] **Step 7: Add integration test for the ingestion wiring**
+- [ ] **Step 8: Add integration test for the ingestion wiring**
 
 Add to `orchestrator/tests/test_alerts_stuck.py`:
 
@@ -851,7 +862,17 @@ pip install pytest-asyncio
 And ensure `pytest.ini` or `pyproject.toml` has `asyncio_mode = auto` or mark the test with
 `@pytest.mark.asyncio`.
 
-- [ ] **Step 9: Run all orchestrator tests**
+- [ ] **Step 9: Verify `stuck` flows through sync.py**
+
+`sync.py`'s `SyncClient.sync_readings()` calls `storage.get_unsynced_readings()` (which returns `SELECT *`, so `stuck` is included) and strips only `id`, `synced`, and `created_at` from the payload before uploading. Confirm this is still true:
+
+```bash
+grep -n "k not in\|strip\|pop\|exclude" pi-agent/sync.py
+```
+
+Expected output includes: `if k not in ['id', 'synced', 'created_at']` — confirming `stuck` is included in the payload automatically. If the strip list has changed, add `stuck` to the explicitly kept fields.
+
+- [ ] **Step 10: Run all orchestrator tests**
 
 ```bash
 cd orchestrator && python -m pytest -v
@@ -859,7 +880,7 @@ cd orchestrator && python -m pytest -v
 
 Expected: all tests PASS.
 
-- [ ] **Step 10: Commit**
+- [ ] **Step 11: Commit**
 
 ```bash
 git add orchestrator/ingestion.py orchestrator/tests/
@@ -923,17 +944,17 @@ cfg = SensorConfig(
     calibration={'min': 300, 'max': 800},
     labels={'location': 'Room A', 'plant_type': 'Fern', 'sensor_name': 'A0'},
     thresholds={'dry_percent': 30, 'wet_percent': 85},
-    stuck_detection=StuckDetectionConfig(window_readings=3, min_range=10)
+    stuck_detection=StuckDetectionConfig(window_readings=5, min_range=10)
 )
 adc = MagicMock()
 adc.read.return_value = 500
 collector = SensorCollector(adc, cfg)
 
-readings = [collector.read() for _ in range(3)]
+readings = [collector.read() for _ in range(5)]
 print('stuck flags:', [r.stuck for r in readings])
-assert readings[0].stuck is False
-assert readings[1].stuck is False
-assert readings[2].stuck is True
+assert readings[0].stuck is False   # window not full yet
+assert readings[3].stuck is False   # window not full yet
+assert readings[4].stuck is True    # window full (5 reads), range=0 < 10
 print('OK: stuck detection works end-to-end')
 "
 ```
