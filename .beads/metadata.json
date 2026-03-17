@@ -1,0 +1,7 @@
+{
+  "database": "dolt",
+  "backend": "dolt",
+  "dolt_mode": "server",
+  "dolt_database": "raspi_moisture_sensor",
+  "project_id": "653fe082-d8a4-4982-80c2-f36ac298c099"
+}

@@ -63,3 +63,6 @@ agent-data/
 pi-agent/data/
 pi-agent/config.yaml
 pi-agent/.env
+
+# Dolt database files (added by bd init)
+.dolt/
