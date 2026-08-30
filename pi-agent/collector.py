@@ -20,7 +20,7 @@ def calculate_moisture_percent(
     Capacitive sensors: Lower value = wetter (inverted)
     Resistive sensors: Higher value = wetter (normal)
     """
-    if sensor_type == "capacitive":
+    if sensor_type in ("capacitive", "resistive_inverted"):
         # Inverted: higher raw value = drier
         percentage = ((sensor_max - raw_value) / (sensor_max - sensor_min)) * 100
     else:  # resistive
