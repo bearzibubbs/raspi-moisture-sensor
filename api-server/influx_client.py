@@ -71,16 +71,21 @@ class InfluxQueryClient:
         """Get time-series data for a specific sensor"""
         query = f'''
         from(bucket: "{self.bucket}")
-            |> range(start: -{hours}h)
+            |> range(start: params.range_start)
             |> filter(fn: (r) => r["_measurement"] == "moisture_reading")
-            |> filter(fn: (r) => r["agent_id"] == "{agent_id}")
-            |> filter(fn: (r) => r["sensor_channel"] == "{sensor_channel}")
+            |> filter(fn: (r) => r["agent_id"] == params.agent_id)
+            |> filter(fn: (r) => r["sensor_channel"] == params.sensor_channel)
             |> filter(fn: (r) => r["_field"] == "moisture_percent")
             |> aggregateWindow(every: 5m, fn: mean, createEmpty: false)
         '''
+        params = {
+            "range_start": timedelta(hours=-hours),
+            "agent_id": agent_id,
+            "sensor_channel": str(sensor_channel),
+        }
 
         try:
-            result = self.query_api.query(query)
+            result = self.query_api.query(query, params=params)
 
             data_points = []
             for table in result:
@@ -105,10 +110,10 @@ class InfluxQueryClient:
         """Get summary statistics for a sensor"""
         query = f'''
         data = from(bucket: "{self.bucket}")
-            |> range(start: -{hours}h)
+            |> range(start: params.range_start)
             |> filter(fn: (r) => r["_measurement"] == "moisture_reading")
-            |> filter(fn: (r) => r["agent_id"] == "{agent_id}")
-            |> filter(fn: (r) => r["sensor_channel"] == "{sensor_channel}")
+            |> filter(fn: (r) => r["agent_id"] == params.agent_id)
+            |> filter(fn: (r) => r["sensor_channel"] == params.sensor_channel)
             |> filter(fn: (r) => r["_field"] == "moisture_percent")
 
         min = data |> min()
@@ -117,9 +122,14 @@ class InfluxQueryClient:
 
         union(tables: [min, max, mean])
         '''
+        params = {
+            "range_start": timedelta(hours=-hours),
+            "agent_id": agent_id,
+            "sensor_channel": str(sensor_channel),
+        }
 
         try:
-            result = self.query_api.query(query)
+            result = self.query_api.query(query, params=params)
 
             summary = {}
             for table in result:
