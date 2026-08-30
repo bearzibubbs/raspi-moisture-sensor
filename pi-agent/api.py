@@ -1,3 +1,4 @@
+import hmac
 import logging
 from typing import Dict, Any, Optional
 from fastapi import FastAPI, HTTPException, Depends, Header
@@ -73,7 +74,7 @@ def verify_bearer_token(authorization: str = Header(None)):
 
     token = authorization.split(" ", 1)[1]
 
-    if token != _config.local_api.bearer_token:
+    if not hmac.compare_digest(token, _config.local_api.bearer_token):
         raise HTTPException(status_code=401, detail="Invalid bearer token")
 
 
