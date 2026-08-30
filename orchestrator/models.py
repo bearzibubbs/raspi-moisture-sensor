@@ -1,4 +1,5 @@
 from sqlalchemy import Column, Integer, String, DateTime, Boolean, Float, Text, ForeignKey, JSON
+from sqlalchemy.ext.mutable import MutableDict
 from sqlalchemy.sql import func
 from database import Base
 from passlib.context import CryptContext
@@ -22,7 +23,7 @@ class Agent(Base):
     status = Column(String(50), default='active')
     desired_config_version = Column(Integer, default=1)
     applied_config_version = Column(Integer, default=0)
-    agent_metadata = Column(JSON)
+    agent_metadata = Column(MutableDict.as_mutable(JSON))
 
     @staticmethod
     def hash_token(token: str) -> str:
