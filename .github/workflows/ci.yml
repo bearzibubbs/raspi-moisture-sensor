@@ -1,0 +1,40 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install ruff
+        run: pip install ruff
+
+      # Gate: real bugs only (undefined names, syntax errors, broken f-strings).
+      # This is the flake8-critical set — style nits are advisory below.
+      - name: ruff (errors)
+        run: ruff check --select E9,F63,F7,F82 --output-format=full .
+
+      # Every module must at least parse/compile.
+      - name: compileall
+        run: python -m compileall -q pi-agent api-server orchestrator *.py
+
+      # Full lint — advisory, does not gate the build.
+      - name: ruff (full, advisory)
+        continue-on-error: true
+        run: ruff check --output-format=full .
+
+      # NOTE: pi-agent/test_grove_*.py and gpio_pin_test.py are hardware smoke
+      # tests (GPIO / Grove / I2C) and cannot run on a cloud runner, so no
+      # pytest job is wired here. Add a self-hosted Pi runner to exercise them.
